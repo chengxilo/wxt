@@ -6902,22 +6902,38 @@ export namespace Browser {
      * @since Chrome 78
      */
     export namespace loginState {
-        export interface SessionStateChangedEvent extends Browser.events.Event<(sessionState: SessionState) => void> {}
+        export enum ProfileType {
+            SIGNIN_PROFILE = "SIGNIN_PROFILE",
+            USER_PROFILE = "USER_PROFILE",
+        }
 
-        /** Possible profile types. */
-        export type ProfileType = "SIGNIN_PROFILE" | "USER_PROFILE";
+        export enum SessionState {
+            UNKNOWN = "UNKNOWN",
+            IN_OOBE_SCREEN = "IN_OOBE_SCREEN",
+            IN_LOGIN_SCREEN = "IN_LOGIN_SCREEN",
+            IN_SESSION = "IN_SESSION",
+            IN_LOCK_SCREEN = "IN_LOCK_SCREEN",
+            IN_RMA_SCREEN = "IN_RMA_SCREEN",
+        }
 
-        /** Possible session states. */
-        export type SessionState = "UNKNOWN" | "IN_OOBE_SCREEN" | "IN_LOGIN_SCREEN" | "IN_SESSION" | "IN_LOCK_SCREEN";
+        /**
+         * Gets the type of the profile the extension is in.
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 96.
+         */
+        export function getProfileType(): Promise<`${ProfileType}`>;
+        export function getProfileType(callback: (result: `${ProfileType}`) => void): void;
 
-        /** Gets the type of the profile the extension is in. */
-        export function getProfileType(callback: (profileType: ProfileType) => void): void;
+        /**
+         * Gets the current session state.
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 96.
+         */
+        export function getSessionState(): Promise<`${SessionState}`>;
+        export function getSessionState(callback: (sessionState: `${SessionState}`) => void): void;
 
-        /** Gets the current session state. */
-        export function getSessionState(callback: (sessionState: SessionState) => void): void;
-
-        /** Dispatched when the session state changes. sessionState is the new session state.*/
-        export const onSessionStateChanged: SessionStateChangedEvent;
+        /** Dispatched when the session state changes. `sessionState` is the new session state.*/
+        export const onSessionStateChanged: events.Event<(sessionState: `${SessionState}`) => void>;
     }
 
     ////////////////////
@@ -10142,69 +10158,74 @@ export namespace Browser {
      * Permissions: "system.storage"
      */
     export namespace system.storage {
+        export enum EjectDeviceResultCode {
+            /** The ejection command is successful -- the application can prompt the user to remove the device. */
+            SUCCESS = "success",
+            /** The device is in use by another application. The ejection did not succeed; the user should not remove the device until the other application is done with the device. */
+            IN_USE = "in_use",
+            /** There is no such device known. */
+            NO_SUCH_DEVICE = "no_such_device",
+            /** The ejection command failed. */
+            FAILURE = "failure",
+        }
+
         export interface StorageUnitInfo {
             /** The transient ID that uniquely identifies the storage device. This ID will be persistent within the same run of a single application. It will not be a persistent identifier between different runs of an application, or between different applications. */
             id: string;
             /** The name of the storage unit. */
             name: string;
-            /**
-             * The media type of the storage unit.
-             * fixed: The storage has fixed media, e.g. hard disk or SSD.
-             * removable: The storage is removable, e.g. USB flash drive.
-             * unknown: The storage type is unknown.
-             */
-            type: string;
+            /** The media type of the storage unit. */
+            type: `${StorageUnitType}`;
             /** The total amount of the storage space, in bytes. */
             capacity: number;
         }
 
-        export interface StorageCapacityInfo {
-            /** A copied |id| of getAvailableCapacity function parameter |id|. */
+        export enum StorageUnitType {
+            /** The storage has fixed media, e.g. hard disk or SSD. */
+            FIXED = "fixed",
+            /** The storage is removable, e.g. USB flash drive. */
+            REMOVABLE = "removable",
+            /** The storage type is unknown. */
+            UNKNOWN = "unknown",
+        }
+
+        export interface StorageAvailableCapacityInfo {
+            /** A copied `id` of getAvailableCapacity function parameter `id`. */
             id: string;
             /** The available capacity of the storage device, in bytes. */
             availableCapacity: number;
         }
 
-        export interface SystemStorageAttachedEvent extends Browser.events.Event<(info: StorageUnitInfo) => void> {}
-
-        export interface SystemStorageDetachedEvent extends Browser.events.Event<(id: string) => void> {}
-
-        /** Get the storage information from the system. The argument passed to the callback is an array of StorageUnitInfo objects. */
-        export function getInfo(callback: (info: StorageUnitInfo[]) => void): void;
         /**
          * Get the storage information from the system. The argument passed to the callback is an array of StorageUnitInfo objects.
-         * @return The `getInfo` method provides its result via callback or returned as a `Promise` (MV3 only).
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 91.
          */
         export function getInfo(): Promise<StorageUnitInfo[]>;
+        export function getInfo(callback: (info: StorageUnitInfo[]) => void): void;
+
         /**
          * Ejects a removable storage device.
-         * @param callback
-         * Parameter result: success: The ejection command is successful -- the application can prompt the user to remove the device; in_use: The device is in use by another application. The ejection did not succeed; the user should not remove the device until the other application is done with the device; no_such_device: There is no such device known. failure: The ejection command failed.
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 91.
          */
-        export function ejectDevice(id: string, callback: (result: string) => void): void;
+        export function ejectDevice(id: string): Promise<`${EjectDeviceResultCode}`>;
+        export function ejectDevice(id: string, callback: (result: `${EjectDeviceResultCode}`) => void): void;
+
         /**
-         * Ejects a removable storage device.
-         * @param callback
-         * Parameter result: success: The ejection command is successful -- the application can prompt the user to remove the device; in_use: The device is in use by another application. The ejection did not succeed; the user should not remove the device until the other application is done with the device; no_such_device: There is no such device known. failure: The ejection command failed.
-         * @return The `ejectDevice` method provides its result via callback or returned as a `Promise` (MV3 only).
-         */
-        export function ejectDevice(id: string): Promise<string>;
-        /**
-         * Get the available capacity of a specified |id| storage device. The |id| is the transient device ID from StorageUnitInfo.
+         * Get the available capacity of a specified `id` storage device. The `id` is the transient device ID from StorageUnitInfo.
+         *
+         * Can return its result via Promise in Manifest V3.
          * @since Dev channel only.
          */
-        export function getAvailableCapacity(id: string, callback: (info: StorageCapacityInfo) => void): void;
-        /**
-         * Get the available capacity of a specified |id| storage device. The |id| is the transient device ID from StorageUnitInfo.
-         * @since Dev channel only.
-         * @return The `getAvailableCapacity` method provides its result via callback or returned as a `Promise` (MV3 only).
-         */
-        export function getAvailableCapacity(id: string): Promise<StorageCapacityInfo>;
+        export function getAvailableCapacity(id: string): Promise<StorageAvailableCapacityInfo>;
+        export function getAvailableCapacity(id: string, callback: (info: StorageAvailableCapacityInfo) => void): void;
 
         /** Fired when a new removable storage is attached to the system. */
-        export var onAttached: SystemStorageAttachedEvent;
+        export const onAttached: events.Event<(info: StorageUnitInfo) => void>;
+
         /** Fired when a removable storage is detached from the system. */
-        export var onDetached: SystemStorageDetachedEvent;
+        export const onDetached: events.Event<(id: string) => void>;
     }
 
     ////////////////////
@@ -10722,11 +10743,8 @@ export namespace Browser {
         export interface CaptureInfo {
             /** The id of the tab whose status changed. */
             tabId: number;
-            /**
-             * The new capture status of the tab.
-             * One of: "pending", "active", "stopped", or "error"
-             */
-            status: string;
+            /** The new capture status of the tab. */
+            status: `${TabCaptureState}`;
             /** Whether an element in the tab being captured is in fullscreen mode. */
             fullscreen: boolean;
         }
@@ -10737,46 +10755,55 @@ export namespace Browser {
         }
 
         export interface CaptureOptions {
-            /** Optional. */
             audio?: boolean | undefined;
-            /** Optional. */
             video?: boolean | undefined;
-            /** Optional. */
             audioConstraints?: MediaStreamConstraint | undefined;
-            /** Optional. */
             videoConstraints?: MediaStreamConstraint | undefined;
         }
 
+        /** @since Chrome 71 */
         export interface GetMediaStreamOptions {
-            /** Optional tab id of the tab which will later invoke getUserMedia() to consume the stream. If not specified then the resulting stream can be used only by the calling extension. The stream can only be used by frames in the given tab whose security origin matches the consumber tab's origin. The tab's origin must be a secure origin, e.g. HTTPS. */
+            /** Optional tab id of the tab which will later invoke `getUserMedia()` to consume the stream. If not specified then the resulting stream can be used only by the calling extension. The stream can only be used by frames in the given tab whose security origin matches the consumber tab's origin. The tab's origin must be a secure origin, e.g. HTTPS. */
             consumerTabId?: number | undefined;
-            /** Optional tab id of the tab which will be captured. If not specified then the current active tab will be selected. Only tabs for which the extension has been granted the activeTab permission can be used as the target tab. */
+            /** Optional tab id of the tab which will be captured. If not specified then the current active tab will be selected. Only tabs for which the extension has been granted the `activeTab` permission can be used as the target tab. */
             targetTabId?: number | undefined;
         }
 
-        export interface CaptureStatusChangedEvent extends Browser.events.Event<(info: CaptureInfo) => void> {}
+        export enum TabCaptureState {
+            PENDING = "pending",
+            ACTIVE = "active",
+            STOPPED = "stopped",
+            ERROR = "error",
+        }
 
         /**
-         * Captures the visible area of the currently active tab. Capture can only be started on the currently active tab after the extension has been invoked. Capture is maintained across page navigations within the tab, and stops when the tab is closed, or the media stream is closed by the extension.
+         * Captures the visible area of the currently active tab. Capture can only be started on the currently active tab after the extension has been invoked, similar to the way that activeTab works. Capture is maintained across page navigations within the tab, and stops when the tab is closed, or the media stream is closed by the extension.
          * @param options Configures the returned media stream.
-         * @param callback Callback with either the tab capture stream or null.
          */
         export function capture(options: CaptureOptions, callback: (stream: MediaStream | null) => void): void;
+
         /**
          * Returns a list of tabs that have requested capture or are being captured, i.e. status != stopped and status != error. This allows extensions to inform the user that there is an existing tab capture that would prevent a new tab capture from succeeding (or to prevent redundant requests for the same tab).
-         * @param callback Callback invoked with CaptureInfo[] for captured tabs.
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 116.
          */
+        export function getCapturedTabs(): Promise<CaptureInfo[]>;
         export function getCapturedTabs(callback: (result: CaptureInfo[]) => void): void;
 
         /**
          * Creates a stream ID to capture the target tab. Similar to Browser.tabCapture.capture() method, but returns a media stream ID, instead of a media stream, to the consumer tab.
-         * @param options Options for the media stream id to retrieve.
-         * @param callback Callback to invoke with the result. If successful, the result is an opaque string that can be passed to the getUserMedia() API to generate a media stream that corresponds to the target tab. The created streamId can only be used once and expires after a few seconds if it is not used.
+         *
+         * Can return its result via Promise in Manifest V3 or later since Chrome 116.
          */
-        export function getMediaStreamId(options: GetMediaStreamOptions, callback: (streamId: string) => void): void;
+        export function getMediaStreamId(options?: GetMediaStreamOptions): Promise<string>;
+        export function getMediaStreamId(callback: (streamId: string) => void): void;
+        export function getMediaStreamId(
+            options: GetMediaStreamOptions | undefined,
+            callback: (streamId: string) => void,
+        ): void;
 
         /** Event fired when the capture status of a tab changes. This allows extension authors to keep track of the capture status of tabs to keep UI elements like page actions in sync. */
-        export var onStatusChanged: CaptureStatusChangedEvent;
+        export const onStatusChanged: events.Event<(info: CaptureInfo) => void>;
     }
 
     ////////////////////
